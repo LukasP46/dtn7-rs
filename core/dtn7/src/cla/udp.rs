@@ -6,7 +6,6 @@ use dtn7_codegen::cla;
 use log::{debug, error, info};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::net::SocketAddrV4;
 use std::time::Instant;
 use tokio::io;
 use tokio::net::UdpSocket;
@@ -15,10 +14,7 @@ use tokio::sync::mpsc;
 use super::HelpStr;
 
 async fn udp_listener(addr: String, port: u16) -> Result<(), io::Error> {
-    let addr: SocketAddrV4 = format!("{}:{}", addr, port).parse().unwrap();
-    let listener = UdpSocket::bind(&addr)
-        .await
-        .expect("failed to bind udp port");
+    let listener = UdpSocket::bind((addr.as_str(), port)).await?;
     debug!("spawning UDP listener on port {}", port);
     loop {
         let mut buf = [0; 65535];
@@ -45,7 +41,8 @@ pub async fn udp_send_bundles(addr: SocketAddr, bundles: Vec<ByteBuffer>) -> Tra
     let num_bundles = bundles.len();
     let total_bytes: usize = bundles.iter().map(|b| b.len()).sum();
 
-    let sock = UdpSocket::bind("0.0.0.0:0").await;
+    let bind_addr = if addr.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" };
+    let sock = UdpSocket::bind(bind_addr).await;
     if sock.is_err() {
         error!("Error binding UDP socket for sending");
         return TransferResult::Failure;
@@ -107,7 +104,14 @@ impl UdpConvergenceLayer {
                             remote
                         );
                         if !data.is_empty() {
-                            let peeraddr: SocketAddr = remote.parse().unwrap();
+                            let peeraddr: SocketAddr = match remote.parse() {
+                                Ok(peeraddr) => peeraddr,
+                                Err(err) => {
+                                    error!("UdpConvergenceLayer: invalid destination {}: {}", remote, err);
+                                    reply.send(TransferResult::Failure).unwrap();
+                                    continue;
+                                }
+                            };
                             debug!("forwarding to {:?}", peeraddr);
                             tokio::spawn(async move {
                                 reply
