@@ -41,7 +41,11 @@ pub async fn udp_send_bundles(addr: SocketAddr, bundles: Vec<ByteBuffer>) -> Tra
     let num_bundles = bundles.len();
     let total_bytes: usize = bundles.iter().map(|b| b.len()).sum();
 
-    let bind_addr = if addr.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" };
+    let bind_addr = if addr.is_ipv6() {
+        "[::]:0"
+    } else {
+        "0.0.0.0:0"
+    };
     let sock = UdpSocket::bind(bind_addr).await;
     if sock.is_err() {
         error!("Error binding UDP socket for sending");
@@ -107,7 +111,10 @@ impl UdpConvergenceLayer {
                             let peeraddr: SocketAddr = match remote.parse() {
                                 Ok(peeraddr) => peeraddr,
                                 Err(err) => {
-                                    error!("UdpConvergenceLayer: invalid destination {}: {}", remote, err);
+                                    error!(
+                                        "UdpConvergenceLayer: invalid destination {}: {}",
+                                        remote, err
+                                    );
                                     reply.send(TransferResult::Failure).unwrap();
                                     continue;
                                 }
