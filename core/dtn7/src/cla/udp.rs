@@ -14,7 +14,15 @@ use tokio::sync::mpsc;
 use super::HelpStr;
 
 async fn udp_listener(addr: String, port: u16) -> Result<(), io::Error> {
-    let listener = UdpSocket::bind((addr.as_str(), port)).await?;
+    let bind_target = format!("{}:{}", addr, port);
+    let listener = UdpSocket::bind((addr.as_str(), port))
+        .await
+        .map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("failed to bind UDP listener on {}: {}", bind_target, err),
+            )
+        })?;
     debug!("spawning UDP listener on port {}", port);
     loop {
         let mut buf = [0; 65535];
