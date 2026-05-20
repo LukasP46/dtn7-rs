@@ -115,7 +115,7 @@ impl UdpConvergenceLayer {
                                         "UdpConvergenceLayer: invalid destination {}: {}",
                                         remote, err
                                     );
-                                    reply.send(TransferResult::Failure).unwrap();
+                                    let _ = reply.send(TransferResult::Failure);
                                     continue;
                                 }
                             };
