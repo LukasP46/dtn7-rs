@@ -107,8 +107,12 @@ impl UdpConvergenceLayer {
             .and_then(|settings| settings.get("bind").or_else(|| settings.get("local_addr")))
             .map(|s| {
                 let trimmed = s.trim();
-                if trimmed.starts_with('[') && trimmed.ends_with(']') {
-                    trimmed[1..trimmed.len() - 1].to_string()
+                if let Some(no_open_bracket) = trimmed.strip_prefix('[') {
+                    if let Some(no_brackets) = no_open_bracket.strip_suffix(']') {
+                        no_brackets.to_string()
+                    } else {
+                        trimmed.to_string()
+                    }
                 } else {
                     trimmed.to_string()
                 }
