@@ -30,7 +30,10 @@ fn parse_colon_settings(raw: &str) -> Result<HashMap<String, String>, String> {
                 current_value.push_str(segment);
             }
         } else {
-            return Err(format!("invalid setting segment '{}' in '{}'", segment, raw));
+            return Err(format!(
+                "invalid setting segment '{}' in '{}'",
+                segment, raw
+            ));
         }
     }
     Ok(settings)
