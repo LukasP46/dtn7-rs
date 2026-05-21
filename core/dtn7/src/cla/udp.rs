@@ -14,12 +14,17 @@ use tokio::sync::mpsc;
 use super::HelpStr;
 
 async fn udp_listener(addr: String, port: u16) -> Result<(), io::Error> {
+    let bind_display = if addr.contains(':') {
+        format!("[{}]:{}", addr, port)
+    } else {
+        format!("{}:{}", addr, port)
+    };
     let listener = UdpSocket::bind((addr.as_str(), port))
         .await
         .map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("failed to bind UDP listener on {}:{}: {}", addr, port, err),
+                format!("failed to bind UDP listener on {}: {}", bind_display, err),
             )
         })?;
     debug!("spawning UDP listener on port {}", port);
@@ -53,11 +58,13 @@ pub async fn udp_send_bundles(addr: SocketAddr, bundles: Vec<ByteBuffer>) -> Tra
     } else {
         UdpSocket::bind(("0.0.0.0", 0)).await
     };
-    if sock.is_err() {
-        error!("Error binding UDP socket for sending");
-        return TransferResult::Failure;
-    }
-    let sock = sock.unwrap();
+    let sock = match sock {
+        Ok(sock) => sock,
+        Err(err) => {
+            error!("Error binding UDP socket for sending to {}: {}", addr, err);
+            return TransferResult::Failure;
+        }
+    };
     if sock.connect(addr).await.is_err() {
         error!("Error connecting UDP socket for sending");
         return TransferResult::Failure;
