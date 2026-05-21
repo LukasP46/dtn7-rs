@@ -5,6 +5,7 @@ use core::convert::TryFrom;
 use dtn7_codegen::cla;
 use log::{debug, error, info};
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::net::SocketAddr;
 use std::time::Instant;
 use tokio::io;
@@ -14,10 +15,9 @@ use tokio::sync::mpsc;
 use super::HelpStr;
 
 async fn udp_listener(addr: String, port: u16) -> Result<(), io::Error> {
-    let bind_display = if addr.contains(':') {
-        format!("[{}]:{}", addr, port)
-    } else {
-        format!("{}:{}", addr, port)
+    let bind_display = match addr.parse::<IpAddr>() {
+        Ok(IpAddr::V6(_)) => format!("[{}]:{}", addr, port),
+        _ => format!("{}:{}", addr, port),
     };
     let listener = UdpSocket::bind((addr.as_str(), port))
         .await
@@ -27,7 +27,7 @@ async fn udp_listener(addr: String, port: u16) -> Result<(), io::Error> {
                 format!("failed to bind UDP listener on {}: {}", bind_display, err),
             )
         })?;
-    debug!("spawning UDP listener on port {}", port);
+    debug!("spawning UDP listener on {}", bind_display);
     loop {
         let mut buf = [0; 65535];
         let (amt, src) = listener.recv_from(&mut buf).await?;
