@@ -104,8 +104,15 @@ pub struct UdpConvergenceLayer {
 impl UdpConvergenceLayer {
     pub fn new(local_settings: Option<&HashMap<String, String>>) -> UdpConvergenceLayer {
         let addr: String = local_settings
-            .and_then(|settings| settings.get("bind"))
-            .map(|s| s.to_string())
+            .and_then(|settings| settings.get("bind").or_else(|| settings.get("local_addr")))
+            .map(|s| {
+                let trimmed = s.trim();
+                if trimmed.starts_with('[') && trimmed.ends_with(']') && trimmed.len() >= 2 {
+                    trimmed[1..trimmed.len() - 1].to_string()
+                } else {
+                    trimmed.to_string()
+                }
+            })
             .unwrap_or_else(|| "0.0.0.0".to_string());
         let port = local_settings
             .and_then(|settings| settings.get("port"))
